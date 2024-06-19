@@ -4,7 +4,13 @@ VENV_NAME	:= ff_relay311
 MAIN_BRANCH := main
 
 check-ppm-path:
-	@[  "${PPM_ABS_PATH}" ] && echo "PPM path set: ${PPM_ABS_PATH}" || (echo "PPM path not set" && exit 1)
+    # Check that the py package manager lib is installed and set up.
+    ifeq ($(origin PPM_ABS_PATH), undefined)
+        $(info PPM_ABS_PATH not set.)
+        $(error You must set up Py Package Manager first.)
+    else
+        $(info PPM_ABS_PATH set.)
+    endif
 bump-patch: check-ppm-path
 	sh "${PPM_ABS_PATH}" -d --cmd bump --level patch --project $(PROJECT) --lib $(PY_LIB_NAME) --venv $(VENV_NAME) --main-branch $(MAIN_BRANCH)
 bump-minor: check-ppm-path
