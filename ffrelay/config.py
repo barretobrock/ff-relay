@@ -39,7 +39,7 @@ class BaseConfig(object):
     TESTING = False
 
     VERSION = metadata.version('ffrelay')
-    PORT = 5010
+    PORT = 5011
     # Stuff for frontend
     STATIC_DIR_PATH = '../static'
     TEMPLATE_DIR_PATH = '../templates'
