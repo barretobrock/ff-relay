@@ -30,7 +30,7 @@ def add_transaction():
         new_tx_id = new_tx_resp.json()['data']['id']
 
         log.info('Updating original transaction')
-        org_tx_data = copy.deepcopy(data)
+        org_tx_data = copy.deepcopy(data['content'])
         org_notes = org_tx_data['transactions'][tx['index']]['notes']
         tx_note = f'Prop tx: {ffrcore.base_url}/transactions/show/{new_tx_id}'
         if org_notes is None:
