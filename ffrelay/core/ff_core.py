@@ -174,11 +174,12 @@ class FireFlyRelayCore:
                     desc = tx.get('description')
                     if raw_proportion.isnumeric():
                         proportion = float(raw_proportion) / 100
+                        amount = round(float(tx.get('amount')) * proportion, 2)
                         new_txs.append({
                             'new_tx': {
                                 'title': '',
                                 'tx_type': 'deposit' if tx.get('type') == 'withdrawal' else 'withdrawal',
-                                'amount': proportion,
+                                'amount': str(amount),
                                 'desc': desc,
                                 'source_acct_id': self.props.get('inc-acct-id'),
                                 'dest_acct_id': self.props.get('owe-acct-id'),
