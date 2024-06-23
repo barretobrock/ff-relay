@@ -189,7 +189,7 @@ class FireFlyRelayCore:
                             'org_tx': {
                                 # The main transaction
                                 'id': tx_id,
-                                'tx_jrnl_id': tx.get('transaction_journal_id'),
+                                'tx_jrnl_id': str(tx.get('transaction_journal_id')),
                                 # The index of the split that was used.
                                 #   For most transactions, this will always be 0
                                 'index': i

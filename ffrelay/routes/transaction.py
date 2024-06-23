@@ -36,7 +36,7 @@ def add_transaction():
         log.debug('No transactions with matching tags found!')
         return 'OK', 200
 
-    modified_splits = [{'transaction_journal_id': x['transaction_journal_id']}
+    modified_splits = [{'transaction_journal_id': str(x['transaction_journal_id'])}
                        for x in tx_data['transactions']]
     for tx in new_txs:
         log.info('Creating new transaction...')
