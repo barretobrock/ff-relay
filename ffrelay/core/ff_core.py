@@ -32,16 +32,25 @@ class FireFlyRelayCore:
             headers=self.headers,
             json=data
         )
-        resp.raise_for_status()
+        try:
+            resp.raise_for_status()
+        except Exception as e:
+            logger.error(e)
+            logger.warning(data)
         return resp
 
     def _put(self, endpoint: str, data: Dict) -> requests.Response:
         resp = requests.put(
             f'{self.api_url}{endpoint}',
             headers=self.headers,
-            json=data
+            data=data
         )
-        resp.raise_for_status()
+        try:
+            resp.raise_for_status()
+        except Exception as e:
+            logger.error(e)
+            logger.warning(data)
+            raise e
         return resp
 
     def new_single_transaction(
