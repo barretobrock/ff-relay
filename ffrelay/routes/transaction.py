@@ -26,10 +26,10 @@ def add_transaction():
     if triggered_tx_id in ffrcore.new_original_txs:
         # Transaction already handled - skip
         log.info(f'Skipping handling - already worked on original tx id: {triggered_tx_id}')
-        return
+        return 'OK', 200
     elif triggered_tx_id in ffrcore.new_prop_txs:
         log.info(f'Skipping handling - already worked on proportion tx id: {triggered_tx_id}')
-        return
+        return 'OK', 200
 
     new_txs = ffrcore.handle_incoming_transaction_data(data=data)
     for tx in new_txs:
@@ -50,6 +50,7 @@ def add_transaction():
 
         log.info('Sending transaction update.')
         ffrcore.update_transaction(data=org_tx_data)
+    return 'OK', 200
 
 
 @bp_trans.route('/update', methods=['GET', 'POST'])
