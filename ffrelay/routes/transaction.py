@@ -47,9 +47,22 @@ def add_transaction():
         else:
             org_notes += f'\n{tx_note}'
         org_tx_data['transactions'][tx['org_tx']['index']]['notes'] = org_notes
+        log.debug(f'Modified note of original transaction to: "{org_notes}"')
 
-        log.info('Sending transaction update.')
-        ffrcore.update_transaction(data=org_tx_data)
+        log.info('Appending original transaction to update list.')
+        ffrcore.list_of_txs_to_update.append(org_tx_data)
+    return 'OK', 200
+
+
+@bp_trans.route('/check-update', methods=['GET', 'POST'])
+def check_for_transactions_to_update():
+    log = get_app_logger()
+    ffrcore = get_ffr_core()
+
+    for tx in ffrcore.list_of_txs_to_update:
+        log.info(f'Working on updating tx: {tx["id"]}')
+        ffrcore.update_transaction(data=tx)
+
     return 'OK', 200
 
 

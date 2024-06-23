@@ -27,6 +27,7 @@ class FireFlyRelayCore:
         self.props = props
         self.new_original_txs = set()
         self.new_prop_txs = set()
+        self.list_of_txs_to_update = []
 
     def _post(self, endpoint: str, data: Dict) -> requests.Response:
         resp = requests.post(
@@ -99,8 +100,6 @@ class FireFlyRelayCore:
                 ]
             }
         )
-
-        resp.raise_for_status()
         return resp
 
     def update_transaction(self, data: Dict) -> requests.Response:
