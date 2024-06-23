@@ -102,14 +102,13 @@ class FireFlyRelayCore:
         )
         return resp
 
-    def update_transaction(self, data: Dict) -> requests.Response:
+    def update_transaction(self, tx_id: Union[int, str], transactions: List[Dict],
+                           tx_title: str = None) -> requests.Response:
         """
             NOTE: For now this will just be used to update notes of a transaction.
             It might need expansion for broader support
         """
-        logger.info(data)
-        tx_id = data.get('id')
-        tx_title = data.get('group_title')
+        logger.debug(f'Updating tx ({tx_id})...')
 
         resp = self._put(
             endpoint=f'/transactions/{tx_id}',
@@ -117,7 +116,7 @@ class FireFlyRelayCore:
                 "apply_rules": False,
                 "fire_webhooks": False,
                 "group_title": tx_title,
-                "transactions": data.get('transactions', [])
+                "transactions": transactions
             }
         )
 
@@ -190,6 +189,7 @@ class FireFlyRelayCore:
                             'org_tx': {
                                 # The main transaction
                                 'id': tx_id,
+                                'tx_jrnl_id': tx.get('transaction_journal_id'),
                                 # The index of the split that was used.
                                 #   For most transactions, this will always be 0
                                 'index': i

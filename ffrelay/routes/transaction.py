@@ -1,9 +1,6 @@
-import copy
-
 from flask import (
     Blueprint,
     current_app,
-    make_response,
     request,
     jsonify
 )
@@ -22,7 +19,9 @@ def add_transaction():
     ffrcore = get_ffr_core()
 
     data = request.get_json()
-    triggered_tx_id = data['content']['id']
+    tx_data = data['content']
+
+    triggered_tx_id = tx_data['id']
     if triggered_tx_id in ffrcore.new_original_txs:
         # Transaction already handled - skip
         log.info(f'Skipping handling - already worked on original tx id: {triggered_tx_id}')
@@ -32,6 +31,13 @@ def add_transaction():
         return 'OK', 200
 
     new_txs = ffrcore.handle_incoming_transaction_data(data=data)
+
+    if len(new_txs) == 0:
+        log.debug('No transactions with matching tags found!')
+        return 'OK', 200
+
+    modified_splits = [{'transaction_journal_id': x['transaction_journal_id']}
+                       for x in tx_data['transactions']]
     for tx in new_txs:
         log.info('Creating new transaction...')
         new_tx_resp = ffrcore.new_single_transaction(**tx.get('new_tx'))
@@ -39,30 +45,26 @@ def add_transaction():
         ffrcore.new_prop_txs.add(new_tx_id)
 
         log.info('Updating original transaction')
-        org_tx_data = copy.deepcopy(data['content'])
-        org_notes = org_tx_data['transactions'][tx['org_tx']['index']]['notes']
+        split_tx_index = tx['org_tx']['index']
+        org_notes = tx_data['transactions'][split_tx_index]['notes']
         tx_note = f'Prop tx: {ffrcore.base_url}/transactions/show/{new_tx_id}'
         if org_notes is None:
             org_notes = tx_note
         else:
             org_notes += f'\n{tx_note}'
-        org_tx_data['transactions'][tx['org_tx']['index']]['notes'] = org_notes
+
+        # Go through modified splits, find the tx with the matching journal id:
+        for i, ms in enumerate(modified_splits):
+            if ms['transaction_journal_id'] == tx['org_tx']['tx_jrnl_id']:
+                modified_splits[i]['notes'] = org_notes
+
         log.debug(f'Modified note of original transaction to: "{org_notes}"')
 
-        log.info('Appending original transaction to update list.')
-        ffrcore.list_of_txs_to_update.append(org_tx_data)
-    return 'OK', 200
-
-
-@bp_trans.route('/check-update', methods=['GET', 'POST'])
-def check_for_transactions_to_update():
-    log = get_app_logger()
-    ffrcore = get_ffr_core()
-
-    for tx in ffrcore.list_of_txs_to_update:
-        log.info(f'Working on updating tx: {tx["id"]}')
-        ffrcore.update_transaction(data=tx)
-
+        log.info(f'Updating transaction such: \n{modified_splits}')
+        ffrcore.update_transaction(
+            tx_id=triggered_tx_id,
+            transactions=modified_splits
+        )
     return 'OK', 200
 
 
