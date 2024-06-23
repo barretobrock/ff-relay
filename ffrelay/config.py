@@ -26,7 +26,7 @@ def read_secrets(path_obj: pathlib.Path) -> Dict:
     secrets = {}
     with path_obj.open('r') as f:
         for item in f.readlines():
-            if item.startswith('#'):
+            if item.startswith('#') or item.strip() == '':
                 continue
             k, v = item.split('=', 1)
             secrets[k] = v.strip()

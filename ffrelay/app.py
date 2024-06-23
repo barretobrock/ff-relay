@@ -46,6 +46,7 @@ def create_app(*args, **kwargs) -> Flask:
     """Creates a Flask app instance"""
     # Config app, default to development if not provided
     config_class = kwargs.pop('config_class', DevelopmentConfig)
+    config_class.load_secrets()
 
     app = Flask(__name__, static_url_path='/')
     app.config.from_object(config_class)
