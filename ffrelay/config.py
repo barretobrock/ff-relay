@@ -8,6 +8,7 @@ from typing import Dict
 
 from loguru import logger
 
+
 HOME = pathlib.Path().home()
 KEY_DIR = HOME.joinpath('keys')
 LOG_DIR = HOME.joinpath('logs')
@@ -46,13 +47,12 @@ class BaseConfig(object):
 
     SECRETS = None
 
-
     @classmethod
     def load_secrets(cls):
         if cls.ENV == 'DEV':
             secrets_path = pathlib.Path(__file__).parent.parent.joinpath('secretprops.properties')
         else:
-            secrets_path = KEY_DIR.joinpath('plants-secretprops.properties')
+            secrets_path = KEY_DIR.joinpath('ffrelay-secretprops.properties')
         cls.SECRETS = read_secrets(secrets_path)
 
     SECRET_KEY_PATH = KEY_DIR.joinpath('plant-tracker-secret')

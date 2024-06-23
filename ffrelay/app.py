@@ -1,6 +1,5 @@
 from flask import (
     Flask,
-    Response,
     jsonify,
     request,
 )
@@ -12,6 +11,7 @@ from werkzeug.exceptions import HTTPException
 from werkzeug.http import HTTP_STATUS_CODES
 
 from ffrelay.config import DevelopmentConfig
+from ffrelay.core.ff_core import FireFlyRelayCore
 from ffrelay.routes.helpers import (
     clear_trailing_slash,
     get_app_logger,
@@ -59,6 +59,9 @@ def create_app(*args, **kwargs) -> Flask:
     app.logger.addHandler(InterceptHandler(logger=logger))
     # Bind logger so it's easy to call from app object in routes
     app.extensions.setdefault('logg', logger)
+
+    ffr_core = FireFlyRelayCore(props=config_class.SECRETS)
+    app.extensions.setdefault('ffr-core', ffr_core)
 
     # Register routes
     logger.info('Registering routes...')

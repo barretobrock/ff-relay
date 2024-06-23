@@ -8,9 +8,15 @@ from flask import (
 )
 from pukr import PukrLog
 
+from ffrelay.core.ff_core import FireFlyRelayCore
+
 
 def get_app_logger() -> PukrLog:
     return current_app.extensions['logg']
+
+
+def get_ffr_core() -> FireFlyRelayCore:
+    return current_app.extensions['ffr-core']
 
 
 def log_before():
