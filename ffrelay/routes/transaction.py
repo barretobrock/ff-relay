@@ -31,13 +31,13 @@ def add_transaction():
 
         log.info('Updating original transaction')
         org_tx_data = copy.deepcopy(data['content'])
-        org_notes = org_tx_data['transactions'][tx['index']]['notes']
+        org_notes = org_tx_data['transactions'][tx['org_tx']['index']]['notes']
         tx_note = f'Prop tx: {ffrcore.base_url}/transactions/show/{new_tx_id}'
         if org_notes is None:
             org_notes = tx_note
         else:
             org_notes += f'\n{tx_note}'
-        org_tx_data['transactions'][tx['index']]['notes'] = org_notes
+        org_tx_data['transactions'][tx['org_tx']['index']]['notes'] = org_notes
 
         log.info('Sending transaction update.')
         ffrcore.update_transaction(data=org_tx_data)
