@@ -67,7 +67,7 @@ class FireFlyRelayCore:
         resp = self._post(
             endpoint='/transactions',
             data={
-                "error_if_duplicate_hash": False,
+                "error_if_duplicate_hash": True,
                 "apply_rules": False,
                 "fire_webhooks": False,
                 "group_title": title,
@@ -97,6 +97,7 @@ class FireFlyRelayCore:
             NOTE: For now this will just be used to update notes of a transaction.
             It might need expansion for broader support
         """
+        logger.info(data)
         tx_id = data.get('id')
         tx_title = data.get('group_title')
 
@@ -120,8 +121,9 @@ class FireFlyRelayCore:
              (and original transaction details to update)
         """
         logger.info('Receiving data for transaction...')
+        logger.info(data)
         content = data['content']
-        tx_id = data['id']
+        tx_id = content['id']
         txs = content['transactions']
         logger.info(f'Transaction id: {tx_id}')
 
