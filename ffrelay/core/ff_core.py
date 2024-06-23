@@ -25,6 +25,8 @@ class FireFlyRelayCore:
             'Content-Type': 'application/json'
         }
         self.props = props
+        self.new_original_txs = set()
+        self.new_prop_txs = set()
 
     def _post(self, endpoint: str, data: Dict) -> requests.Response:
         resp = requests.post(
@@ -135,6 +137,7 @@ class FireFlyRelayCore:
         tx_id = content['id']
         txs = content['transactions']
         logger.info(f'Transaction id: {tx_id}')
+        self.new_original_txs.add(tx_id)
 
         new_txs = []
 
@@ -177,7 +180,7 @@ class FireFlyRelayCore:
                         amount = round(float(tx.get('amount')) * proportion, 2)
                         new_txs.append({
                             'new_tx': {
-                                'title': '',
+                                'title': f'Mprop - {content["group_title"]}',
                                 'tx_type': 'deposit' if tx.get('type') == 'withdrawal' else 'withdrawal',
                                 'amount': str(amount),
                                 'desc': desc,

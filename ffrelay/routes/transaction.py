@@ -22,12 +22,21 @@ def add_transaction():
     ffrcore = get_ffr_core()
 
     data = request.get_json()
+    triggered_tx_id = data['content']['id']
+    if triggered_tx_id in ffrcore.new_original_txs:
+        # Transaction already handled - skip
+        log.info(f'Skipping handling - already worked on original tx id: {triggered_tx_id}')
+        return
+    elif triggered_tx_id in ffrcore.new_prop_txs:
+        log.info(f'Skipping handling - already worked on proportion tx id: {triggered_tx_id}')
+        return
 
     new_txs = ffrcore.handle_incoming_transaction_data(data=data)
     for tx in new_txs:
         log.info('Creating new transaction...')
         new_tx_resp = ffrcore.new_single_transaction(**tx.get('new_tx'))
         new_tx_id = new_tx_resp.json()['data']['id']
+        ffrcore.new_prop_txs.add(new_tx_id)
 
         log.info('Updating original transaction')
         org_tx_data = copy.deepcopy(data['content'])
@@ -41,8 +50,6 @@ def add_transaction():
 
         log.info('Sending transaction update.')
         ffrcore.update_transaction(data=org_tx_data)
-
-    return make_response('', 200)
 
 
 @bp_trans.route('/update', methods=['GET', 'POST'])
