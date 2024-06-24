@@ -46,7 +46,7 @@ class FireFlyRelayCore:
         resp = requests.put(
             f'{self.api_url}{endpoint}',
             headers=self.headers,
-            data=data
+            json=data
         )
         try:
             resp.raise_for_status()
