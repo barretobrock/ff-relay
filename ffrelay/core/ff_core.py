@@ -252,10 +252,11 @@ class FireFlyRelayCore:
                 prop_tx_id = split['org_tx']['prop_tx_id']
                 # Get proportional transaction data
                 prop_tx_data = self.get_transaction(prop_tx_id)
+                prop_txs = prop_tx_data['attributes']
 
                 # Collect transaction journal ids
                 modified_splits = []
-                for ptx in prop_tx_data['transactions']:
+                for ptx in prop_txs['transactions']:
                     t_split_data = {'transaction_journal_id': str(ptx['transaction_journal_id'])}
                     if re.search(fr'\w+\stx:\shttp://.*/show/{prop_tx_id}', ptx.get('notes', '')):
                         # Notes had the link to our original transaction - this should be it.
