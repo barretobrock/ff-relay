@@ -25,9 +25,25 @@ class FireFlyRelayCore:
             'Content-Type': 'application/json'
         }
         self.props = props
+        # New transaction ids (original and proportion transaction)
         self.new_original_txs = set()
         self.new_prop_txs = set()
+        # Updated transaction ids (original and proportion transaction)
+        self.updated_original_txs = set()
+        self.updated_prop_txs = set()
         self.list_of_txs_to_update = []
+
+    def _get(self, endpoint: str) -> requests.Response:
+        resp = requests.get(
+            f'{self.api_url}{endpoint}',
+            headers=self.headers,
+        )
+        try:
+            resp.raise_for_status()
+        except Exception as e:
+            logger.error(e)
+            raise e
+        return resp
 
     def _post(self, endpoint: str, data: Dict) -> requests.Response:
         resp = requests.post(
@@ -40,6 +56,7 @@ class FireFlyRelayCore:
         except Exception as e:
             logger.error(e)
             logger.warning(data)
+            raise e
         return resp
 
     def _put(self, endpoint: str, data: Dict) -> requests.Response:
@@ -102,6 +119,11 @@ class FireFlyRelayCore:
         )
         return resp
 
+    def get_transaction(self, transaction_id: Union[int, str]) -> Dict:
+        resp = self._get(endpoint=f'/transactions/{transaction_id}')
+        resp.raise_for_status()
+        return resp.json()['data']
+
     def update_transaction(self, tx_id: Union[int, str], transactions: List[Dict],
                            tx_title: str = None) -> requests.Response:
         """
@@ -131,6 +153,7 @@ class FireFlyRelayCore:
         """
         logger.info('Receiving data for transaction...')
         logger.info(data)
+
         content = data['content']
         tx_id = content['id']
         txs = content['transactions']
@@ -142,7 +165,10 @@ class FireFlyRelayCore:
         # Iterate through splits; for any transaction split containing the tag pattern,
         #   build the criteria needed to create a new transaction for it
         for i, tx in enumerate(txs):
-            for tag in tx.get('tags', []):
+            tags = tx.get('tags')
+            if not tags:
+                tags = []
+            for tag in tags:
                 """
                     ⠀ ⣠⠴⠶⠦⣄⠀⠀⣠⠤⢤⡀⠀⢀⣀⣀⣀⠀⠀⠀⠀⠀⠀⠀⠀
                 ⠀⠀⠀⠀⢸⠱⠀⠀⠀⠈⢧⡞⠁⠀⠀⢹⡴⠋⠀⠀⠈⠳⡀⠀⠀⠀⠀⠀⠀
@@ -171,12 +197,20 @@ class FireFlyRelayCore:
                                                          `.__/
                 """
                 if tag_match := re.match(r'\w+-p(\d+)', tag):
+                    is_updated = False
+                    prop_tx_id = None
+                    if current_notes := re.search(r'\w+\stx:\shttp:\/\/.*\/show\/(\d+)', tx.get('notes', '')):
+                        logger.info('Transaction is an update that was previously handled by this process.')
+                        # Existing note in transaction - likely updated
+                        is_updated = True
+                        prop_tx_id = current_notes.group(1)
                     raw_proportion = tag_match.group(1)
                     desc = tx.get('description')
                     if raw_proportion.isnumeric():
                         proportion = float(raw_proportion) / 100
                         amount = round(float(tx.get('amount')) * proportion, 2)
                         new_txs.append({
+                            'is_update': is_updated,
                             'new_tx': {
                                 'title': f'Mprop - {content["group_title"]}',
                                 'tx_type': 'deposit' if tx.get('type') == 'withdrawal' else 'withdrawal',
@@ -190,6 +224,7 @@ class FireFlyRelayCore:
                                 # The main transaction
                                 'id': tx_id,
                                 'tx_jrnl_id': str(tx.get('transaction_journal_id')),
+                                'prop_tx_id': prop_tx_id,
                                 # The index of the split that was used.
                                 #   For most transactions, this will always be 0
                                 'index': i
@@ -198,4 +233,65 @@ class FireFlyRelayCore:
         logger.info(f'{len(new_txs)} new transactions to make from transaction id {tx_id}')
         return new_txs
 
+    def add_to_notes(self, transaction_data: Dict, split_index: int, new_transaction_id: int) -> str:
+        org_notes = transaction_data['transactions'][split_index]['notes']
+        tx_note = f'Proportion tx: {self.base_url}/transactions/show/{new_transaction_id}'
+        if org_notes is None:
+            org_notes = tx_note
+        else:
+            org_notes += f'\n{tx_note}'
+        return org_notes
 
+    def process_new_splits(self, new_splits: List[Dict], transaction_data: Dict):
+        triggered_tx_id = transaction_data['id']
+
+        for split in new_splits:
+            if split.get('is_update'):
+                logger.info('Updating proportional transaction...')
+                prop_tx_id = split['org_tx']['prop_tx_id']
+                # Get proportional transaction data
+                prop_tx_data = self.get_transaction(prop_tx_id)
+
+                # Collect transaction journal ids
+                modified_splits = []
+                for ptx in prop_tx_data['transactions']:
+                    t_split_data = {'transaction_journal_id': str(ptx['transaction_journal_id'])}
+                    if re.search(fr'\w+\stx:\shttp://.*/show/{prop_tx_id}', ptx.get('notes', '')):
+                        # Notes had the link to our original transaction - this should be it.
+                        new_amount = split['new_tx']['amount']
+                        if ptx['amount'] == new_amount:
+                            logger.info('Split matching notes did not have a changed amount. Aborting.')
+                            return
+                        else:
+                            logger.info('Changing the amount for split matching notes...')
+                            t_split_data['amount'] = new_amount
+                    modified_splits.append(t_split_data)
+
+                self.updated_prop_txs.add(prop_tx_id)
+            else:
+                logger.info('Creating new transaction...')
+
+                modified_splits = [{'transaction_journal_id': str(x['transaction_journal_id'])}
+                                   for x in transaction_data['transactions']]
+
+                new_tx_resp = self.new_single_transaction(**split.get('new_tx'))
+                new_tx_id = new_tx_resp.json()['data']['id']
+                self.new_prop_txs.add(new_tx_id)
+
+                logger.info('Updating original transaction')
+                split_tx_index = split['org_tx']['index']
+                org_notes = self.add_to_notes(transaction_data=transaction_data, split_index=split_tx_index,
+                                              new_transaction_id=new_tx_id)
+
+                # Go through modified splits, find the tx with the matching journal id:
+                for i, ms in enumerate(modified_splits):
+                    if ms['transaction_journal_id'] == split['org_tx']['tx_jrnl_id']:
+                        modified_splits[i]['notes'] = org_notes
+
+                logger.debug(f'Modified note of original transaction to: "{org_notes}"')
+
+            logger.info(f'Updating transaction such: \n{modified_splits}')
+            self.update_transaction(
+                tx_id=triggered_tx_id,
+                transactions=modified_splits
+            )
