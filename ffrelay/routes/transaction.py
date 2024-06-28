@@ -1,13 +1,13 @@
 from flask import (
     Blueprint,
     current_app,
+    jsonify,
     request,
-    jsonify
 )
 
 from ffrelay.routes.helpers import (
     get_app_logger,
-    get_ffr_core
+    get_ffr_core,
 )
 
 bp_trans = Blueprint('transaction', __name__, url_prefix='/transaction')

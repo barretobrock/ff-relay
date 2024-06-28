@@ -1,7 +1,7 @@
 from flask import (
     Blueprint,
     current_app,
-    jsonify
+    jsonify,
 )
 
 bp_main = Blueprint('main', __name__)

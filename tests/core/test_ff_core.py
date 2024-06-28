@@ -9,15 +9,14 @@ from unittest.mock import MagicMock
 from pukr import get_logger
 
 from ffrelay.core.ff_core import FireFlyRelayCore
-
 from tests.common import (
     make_patcher,
     random_string,
 )
 from tests.mocks.transaction import (
-    make_new_transaction_event,
     DEFAULT_DEST_ID,
-    DEFAULT_SOURCE_ID
+    DEFAULT_SOURCE_ID,
+    make_new_transaction_event,
 )
 
 

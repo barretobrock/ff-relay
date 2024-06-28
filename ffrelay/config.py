@@ -8,7 +8,6 @@ from typing import Dict
 
 from loguru import logger
 
-
 HOME = pathlib.Path().home()
 KEY_DIR = HOME.joinpath('keys')
 LOG_DIR = HOME.joinpath('logs')

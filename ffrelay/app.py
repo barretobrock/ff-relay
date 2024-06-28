@@ -21,7 +21,6 @@ from ffrelay.routes.helpers import (
 from ffrelay.routes.main import bp_main
 from ffrelay.routes.transaction import bp_trans
 
-
 ROUTES = [
     bp_main,
     bp_trans

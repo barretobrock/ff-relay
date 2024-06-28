@@ -4,7 +4,7 @@ from flask import (
     current_app,
     g,
     redirect,
-    request
+    request,
 )
 from pukr import PukrLog
 

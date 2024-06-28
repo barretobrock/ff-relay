@@ -2,15 +2,14 @@ from typing import (
     Dict,
     List,
     Optional,
-    Union
+    Union,
 )
 
 from ..common import (
     random_float,
     random_int,
-    random_string
+    random_string,
 )
-
 
 DEFAULT_DEST_ID = 20
 DEFAULT_SOURCE_ID = 40

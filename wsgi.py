@@ -1,6 +1,5 @@
-from ffrelay.config import ProductionConfig
 from ffrelay.app import create_app
-
+from ffrelay.config import ProductionConfig
 
 # Instantiate log here, as the hosts API is requested to communicate with influx
 app = create_app(config_class=ProductionConfig)

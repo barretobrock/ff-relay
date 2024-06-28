@@ -2,8 +2,8 @@ import datetime
 import re
 from typing import (
     Dict,
+    List,
     Union,
-    List
 )
 
 from loguru import logger
@@ -254,56 +254,79 @@ class FireFlyRelayCore:
         for split in new_splits:
             if split.get('is_update'):
                 # The main transaction was updated. Find the proportion transaction and update the amount
-                logger.info('Updating proportional transaction...')
-                prop_tx_id = split['org_tx']['prop_tx_id']
-                # Get proportional transaction data
-                prop_tx_data = self.get_transaction(prop_tx_id)
-                prop_txs = prop_tx_data['attributes']
-
-                # Collect transaction journal ids
-                modified_splits = []
-                for ptx in prop_txs['transactions']:
-                    t_split_data = {'transaction_journal_id': str(ptx['transaction_journal_id'])}
-                    ptx_notes = ptx.get('notes') if ptx.get('notes') is not None else ''
-                    if re.search(fr'\w+\stx:\shttp://.*/show/{triggered_tx_id}', ptx_notes):
-                        # Notes had the link to our original transaction - this should be it.
-                        new_amount = split['new_tx']['amount']
-                        if ptx['amount'] == new_amount:
-                            logger.info('Split matching notes did not have a changed proportional amount. Aborting.')
-                            return
-                        else:
-                            logger.info('Changing the amount for split matching notes...')
-                            t_split_data['amount'] = new_amount
-                    else:
-                        logger.debug(f'No notes found matching the link to '
-                                     f'the original transaction id {triggered_tx_id}')
-                    modified_splits.append(t_split_data)
-
-                self.updated_txs.add(prop_tx_id)
+                self.process_updated_transaction(
+                    triggered_tx_id=triggered_tx_id,
+                    split=split
+                )
             else:
-                logger.info('Creating new transaction...')
+                self.process_new_transaction(
+                    triggered_tx_id=triggered_tx_id,
+                    split=split,
+                    transaction_data=transaction_data
+                )
 
-                modified_splits = [{'transaction_journal_id': str(x['transaction_journal_id'])}
-                                   for x in transaction_data['transactions']]
+    def process_new_transaction(self, triggered_tx_id: int, split: Dict, transaction_data: Dict):
+        """Creates a new proportional transaction, then updated the original, new transaction
+            (that triggered this process) with that proportional transaction's details"""
+        logger.info('Creating new transaction...')
 
-                new_tx_resp = self.new_single_transaction(**split.get('new_tx'))
-                new_tx_id = new_tx_resp.json()['data']['id']
-                self.new_txs.add(new_tx_id)
+        modified_splits = [{'transaction_journal_id': str(x['transaction_journal_id'])}
+                           for x in transaction_data['transactions']]
 
-                logger.info('Updating original transaction')
-                split_tx_index = split['org_tx']['index']
-                org_notes = self.add_to_notes(transaction_data=transaction_data, split_index=split_tx_index,
-                                              new_transaction_id=new_tx_id)
+        new_tx_resp = self.new_single_transaction(**split.get('new_tx'))
+        new_tx_id = new_tx_resp.json()['data']['id']
+        self.new_txs.add(new_tx_id)
 
-                # Go through modified splits, find the tx with the matching journal id:
-                for i, ms in enumerate(modified_splits):
-                    if ms['transaction_journal_id'] == split['org_tx']['tx_jrnl_id']:
-                        modified_splits[i]['notes'] = org_notes
+        logger.info('Updating original transaction')
+        split_tx_index = split['org_tx']['index']
+        org_notes = self.add_to_notes(transaction_data=transaction_data, split_index=split_tx_index,
+                                      new_transaction_id=new_tx_id)
 
-                logger.debug(f'Modified note of original transaction to: "{org_notes}"')
+        # Go through modified splits, find the tx with the matching journal id:
+        for i, ms in enumerate(modified_splits):
+            if ms['transaction_journal_id'] == split['org_tx']['tx_jrnl_id']:
+                modified_splits[i]['notes'] = org_notes
 
-            logger.info(f'Updating transaction such: \n{modified_splits}')
-            self.update_transaction(
-                tx_id=triggered_tx_id,
-                transactions=modified_splits
-            )
+        logger.debug(f'Modified note of original transaction to: "{org_notes}"')
+
+        logger.info(f'Updating transaction id {triggered_tx_id} such: \n\t{modified_splits}')
+        self.update_transaction(
+            tx_id=triggered_tx_id,
+            transactions=modified_splits
+        )
+
+    def process_updated_transaction(self, triggered_tx_id: int, split: Dict,):
+        """Takes in an updated transaction's info and syncs it with
+        the proportional transaction it links to via notes"""
+        logger.info('Updating proportional transaction...')
+        prop_tx_id = split['org_tx']['prop_tx_id']
+        # Get proportional transaction data
+        prop_tx_data = self.get_transaction(prop_tx_id)
+        prop_txs = prop_tx_data['attributes']
+
+        # Collect transaction journal ids
+        modified_splits = []
+        for ptx in prop_txs['transactions']:
+            t_split_data = {'transaction_journal_id': str(ptx['transaction_journal_id'])}
+            ptx_notes = ptx.get('notes') if ptx.get('notes') is not None else ''
+            if re.search(fr'\w+\stx:\shttp://.*/show/{triggered_tx_id}', ptx_notes):
+                # Notes had the link to our original transaction - this should be it.
+                new_amount = split['new_tx']['amount']
+                if ptx['amount'] == new_amount:
+                    logger.info('Split matching notes did not have a changed proportional amount. Aborting.')
+                    return
+                else:
+                    logger.info('Changing the amount for split matching notes...')
+                    t_split_data['amount'] = new_amount
+            else:
+                logger.debug(f'No notes found matching the link to '
+                             f'the original transaction id {triggered_tx_id}')
+            modified_splits.append(t_split_data)
+
+        self.updated_txs.add(prop_tx_id)
+
+        logger.info(f'Updating transaction id {prop_tx_id} such: \n\t{modified_splits}')
+        self.update_transaction(
+            tx_id=prop_tx_id,
+            transactions=modified_splits
+        )
