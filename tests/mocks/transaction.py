@@ -21,7 +21,7 @@ def make_transaction_journal(
         tx_type: str = 'withdrawal',
         amount: Union[float, str] = None,
         desc: str = None,
-        notes: str = '',
+        notes: str = None,
         tags: List[str] = None,
         source_id: int = DEFAULT_SOURCE_ID,
         dest_id: int = DEFAULT_DEST_ID

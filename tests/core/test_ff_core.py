@@ -43,10 +43,16 @@ class TestFFRCore(TestCase):
 
         self.assertDictEqual(self.props, self.ffr.props)
 
-    def test_handle_transaction_data(self):
-        tx_event = make_new_transaction_event()
+    def test_handle_new_transaction_data(self):
+        tx_info_list = [{'tags': ['something-p36']}]
+        tx_event = make_new_transaction_event(txs=tx_info_list)
 
-        self.ffr.handle_incoming_transaction_data(data=tx_event)
+        new_txs = self.ffr.handle_incoming_transaction_data(data=tx_event)
+        self.assertIsInstance(new_txs, list)
+        self.assertEqual(len(tx_info_list), len(new_txs))
+        for new_tx in new_txs:
+            self.assertFalse(new_tx['is_update'])
+            self.assertIn(new_tx['org_tx']['id'], self.ffr.new_original_txs)
 
 
 if __name__ == '__main__':

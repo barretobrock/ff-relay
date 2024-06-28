@@ -199,7 +199,8 @@ class FireFlyRelayCore:
                 if tag_match := re.match(r'\w+-p(\d+)', tag):
                     is_updated = False
                     prop_tx_id = None
-                    if current_notes := re.search(r'\w+\stx:\shttp:\/\/.*\/show\/(\d+)', tx.get('notes', '')):
+                    tx_notes = tx.get('notes') if tx.get('notes') is not None else ''
+                    if current_notes := re.search(r'\w+\stx:\shttp:\/\/.*\/show\/(\d+)', tx_notes):
                         logger.info('Transaction is an update that was previously handled by this process.')
                         # Existing note in transaction - likely updated
                         is_updated = True
