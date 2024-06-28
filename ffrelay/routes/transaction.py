@@ -22,15 +22,12 @@ def add_transaction():
     tx_data = data['content']
 
     triggered_tx_id = tx_data['id']
-    if triggered_tx_id in ffrcore.new_original_txs:
+    if triggered_tx_id in ffrcore.new_txs:
         # Transaction already handled - skip
-        log.info(f'Skipping new transaction - already worked on original tx id: {triggered_tx_id}')
-        return 'OK', 200
-    elif triggered_tx_id in ffrcore.new_prop_txs:
-        log.info(f'Skipping new transaction - already worked on proportion tx id: {triggered_tx_id}')
+        log.info(f'Skipping new transaction - already worked on tx id: {triggered_tx_id}')
         return 'OK', 200
 
-    new_txs = ffrcore.handle_incoming_transaction_data(data=data)
+    new_txs = ffrcore.handle_incoming_transaction_data(data=data, is_new=True)
 
     if len(new_txs) == 0:
         log.debug('No transactions with matching tags found!')
@@ -52,15 +49,12 @@ def update_transaction():
     tx_data = data['content']
 
     triggered_tx_id = tx_data['id']
-    if triggered_tx_id in ffrcore.updated_original_txs:
+    if triggered_tx_id in ffrcore.updated_txs:
         # Transaction already handled - skip
-        log.info(f'Skipping updated transaction - already worked on original tx id: {triggered_tx_id}')
-        return 'OK', 200
-    elif triggered_tx_id in ffrcore.updated_prop_txs:
-        log.info(f'Skipping updated transaction - already worked on proportion tx id: {triggered_tx_id}')
+        log.info(f'Skipping updated transaction - already worked on tx id: {triggered_tx_id}')
         return 'OK', 200
 
-    new_txs = ffrcore.handle_incoming_transaction_data(data=data)
+    new_txs = ffrcore.handle_incoming_transaction_data(data=data, is_new=False)
 
     if len(new_txs) == 0:
         log.debug('No transactions with matching tags found!')
